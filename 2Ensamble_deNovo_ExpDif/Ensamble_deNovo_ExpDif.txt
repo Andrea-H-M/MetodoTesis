@@ -1,0 +1,113 @@
+################################################################################################
+## Tema: RNA-seq: Ensamble de novo                                                            ##
+## Autor: Olga Andrea Hernandez Miranda, Miranda H                                            ##
+## Fecha: 23/01/2021                                                                          ##
+## Nota: El utiliza los datos recortados y filtrados del transcriptoma para realizar          ##
+## un ensamble de novo y genera distintos estadisticos y métricas para evaluar la calidad     ##
+## del ensamble (N50, ExN50), además realiza una busqueda de ortologos en la base de datos    ##
+## Liliopsida odb10*, realiza la cuantificación de los transcritos y genera tablas de         ##
+## conteo para el cálculo de expresión diferencial                                            ##
+## cuales se realiza un análisis de calidad para saber que recorte                            ##
+## y filtrado hacer                                                                           ##
+## Página: https://github-wiki-see.page/m/trinityrnaseq/trinityrnaseq/wiki/Transcriptome-     ##
+## Contig-Nx-and-ExN50-stats                                                                  ##                      
+################################################################################################
+
+
+###################################---Trininity-Ensamblado---###################################
+
+## Se instala el programa programa Trinity versión 2.4 y se crea una carpeta llamada rnaseq
+## y dentro de esta otra carpeta llamada datos donde se guardan los archivos del 
+## transcriptoma que fueron cortados y filtrados (etiqueta t).
+## Cramos un archivo txt llamado lista donde se especifica el nombre de los archivos del 
+## transcriptoma.
+
+cd /home/winter/rnaseq
+
+Trinity --seqType fq  --samples_file /home/winter/rnaseq/lista.txt --CPU 2 --max_memory 6G
+
+###################################---Trininity-estadisticas---##################################
+
+/home/winter/programas/trinityrnaseq-v2.11.0/util/TrinityStats.pl  trinity_out_dir/Trinity.fastaz
+
+#################################---BUSCO-evaluación de calidad---###############################
+
+## Se instaló el programa BUSCO v4 para explorar la integridad de las secuencias de ortólogos 
+## conservados, a partir de la base de datos Liliopsida odb10*
+
+#/home/winter/Curso2/busco_downloads/lineages/
+
+busco --list-datasets
+
+busco --in trinity_out_dir/Trinity.fasta -l liliopsida_odb10 --mode transcriptome 
+--out trinityBUSCO --cpu 2
+
+/home/winter/programas/busco/scripts/generate_plot.py -wd trinityBUSCO
+
+################################---Salmon-Trinity Cuantificación---##############################
+
+## Se intaló el programa Salmon v0.8.0 
+
+/home/winter/programas/trinityrnaseq-v2.11.0/util/align_and_estimate_abundance.pl --seqType fq 
+--samples_file /home/winter/rnaseq/lista.txt  --transcripts trinity_out_dir/Trinity.fasta 
+--est_method salmon --trinity_mode --prep_reference
+
+#Consultar archivos quant graficamente
+
+######################################---Tablas de conteo---######################################
+
+## Buesca los archivos quant y crea una lista
+find ETAPA* -name "quant.sf" | tee quant_files.list
+
+## Activar R
+conda activate r_env
+
+#Entra a las carpetas y saca la información de quant y crea trinity.isoform.counts.matrix
+
+/home/winter/programas/trinityrnaseq-v2.11.0/util/abundance_estimates_to_matrix.pl 
+--est_method salmon --out_prefix Trinity --name_sample_by_basedir --quant_files quant_files.list 
+--gene_trans_map trinity_out_dir/Trinity.fasta.gene_trans_map
+
+head -n20 Trinity.isoform.counts.matrix | column -t
+
+######################################---Estadistica ExN50---#####################################
+
+/home/winter/programas/trinityrnaseq-v2.11.0/util/misc/contig_ExN50_statistic.pl \
+     Trinity.isoform.TMM.EXPR.matrix trinity_out_dir/Trinity.fasta | tee ExN50.stats
+
+## Se realizó el gráfico en R con el archivo ExN50.stats
+
+## Para saber cuantos genes corresponden a Ex 90
+cat Trinity.isoform.TMM.EXPR.matrix.E-inputs |  egrep -v ^\# | awk '$1 <= 90' | wc -l
+
+##############################---Expresion diferencial - DESeq2---#################################
+
+#Sacar la expresión diferencial de trinity.isoform.cuants. matrix
+
+/home/winter/programas/trinityrnaseq-v2.11.0/Analysis/DifferentialExpression/run_DE_analysis.pl 
+--matrix Trinity.isoform.counts.matrix --samples_file /home/winter/rnaseq/lista.txt --method DESeq2 
+--output DESeq2_trans
+
+conda deactivate
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
