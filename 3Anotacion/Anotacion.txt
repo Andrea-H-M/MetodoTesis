@@ -1,0 +1,44 @@
+################################################################################################
+## Tema: RNA-seq: Anotación                                                                   ##
+## Autor: Olga Andrea Hernandez Miranda, Miranda H                                            ##
+## Fecha: 23/01/2021                                                                          ##
+## Nota: Este script realiza una búsqueda de marcos abiertos de lectura para posteriormente   ##
+## realizar una búsqueda de homología en las bases de datos PFAM y Uniprot                    ##
+## a través de BLAST                                                                          ##
+## cuales se realiza un análisis de calidad para saber que recorte                            ##
+## y filtrado hacer                                                                           ##                                                                                     
+################################################################################################
+
+## Se instala el programa TransDecoder para buscar marcos abiertos de lectura
+## Se instala el programa Trinotate para realizar la anotación en Ubuntu
+## Se descargan las bases de datos PFAM y Uniprot y se guardan en una carpeta (basededatos)
+## Se instala el programa BLAST de NCBI
+
+##################################---Anotando-TransDecoder---###################################
+
+TransDecoder.LongOrfs -t trinity_out_dir/Trinity.fasta
+
+TransDecoder.Predict -t trinity_out_dir/Trinity.fasta
+
+## Nota: El archivo resultante es Trinity.fasta.transdecoder.pep se utiliza 
+## para continuar con las anotaciones.
+
+##################################---Búsqueda de homología---###################################
+
+## #Hacer indice de la base de datos
+
+makeblastdb -in uniprot_sprot.pep -dbtype prot
+
+#blastx -db basededatos/uniprot_sprot.pep -query trinity_out_dir/Trinity.fasta 
+-#num_threads 2 -max_target_seqs 1 -outfmt 6 -evalue 1e-5 > reporte/#swissprot.blastx.outfmt6
+
+blastp -query Trinity.fasta.transdecoder.pep -db basededatos/uniprot_sprot.pep 
+-num_threads 2 -max_target_seqs 1 -outfmt 6 -evalue 1e-5 > swissprot.blastp.outfmt6
+
+#Hacer indice para modelos ocultos de marckop
+hmmpress basededatos/Pfam-A.hmm 
+
+#Alineamiento pep en la base de datos de Pfam y se guarda en TrinotatePFAM.out
+#primero está el output, luego base de datos y luego proteoma
+ 
+hmmscan --cpu 2 --domtblout TrinotatePFAM.out basededatos/Pfam-A.hmm Trinity.fasta.transdecoder.pep
