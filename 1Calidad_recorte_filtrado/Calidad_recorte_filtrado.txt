@@ -1,0 +1,38 @@
+############################################################################################
+## Tema: RNA-seq: Análisis de calidad, recorte y filtrado de secuencias                   ##
+## Autor: Olga Andrea Hernandez Miranda, Miranda H                                        ##
+## Fecha: 23/01/2021                                                                      ##
+## Nota: El siguiente script utiliza datos crudos del transcriptoma con los               ##
+## cuales se realiza un análisis de calidad para saber que recorte                        ##
+## y filtrado hacer                                                                       ##
+## Página:                                                                                ##
+############################################################################################
+
+#################################---Análisis de calidad---##################################
+
+## Primero se instala el programa FastQC versión 0.11.9 en Ubuntu, se crea una 
+## carpera llamada data_raw donde se guardan los datos crudos en formato fastaq.qz.
+## Se ingresa a través de la terminal al directorio de trabajo y se ejecuta
+## el siguiente comando con cada archivo reverso y directo.
+
+fastqc ETAPA1_G1_R1.fastaq.qz ETAPA1_G1_R2.fastq.gz 
+
+#################################---Recorte y filtrado---###################################
+
+## Intslar programa Trimmomatic versión 0.39 en ubuntu
+## Para realizar un recorte suave el siguiente comando utiliza los archivos de 
+## entrada y genera archivos de salida (etiqueta t son los archivos trimmeados 
+## qué están pareados y los que tienen una u son los archivos unpair) 
+## Este recorte suave elimina adaptadores dando un rango de error de 2 bases 
+## por cada 30, genera una ventana de 4 y un score mínimo de phred de 15, 
+## además deja fragmentos con longitudes mínimas de 30:
+
+java -jar /home/cursornaseq/programas/Trimmomatic-0.39/trimmomatic-0.39.jar PE -phred33
+ETAPA1_G1_R1.fastq.gz ETAPA1_G1_R2.fastq.gz 
+ETAPA1_G1t_R1.fastq.gz ETAPA1_G1u_R1.fastq.gz 
+ETAPA1_G1t_R2.fastq.gz ETAPA1_G1u_R2.fastq.gz 
+ILLUMINACLIP:TruSeq3-PE.fa:2:30:10 SLIDINGWINDOW:4:15 MINLEN:30
+
+## Los archivos de salida se guardan en una carpeta llamada qc_raw_alternativo
+## Se recomienda realizar el control de calidad a los archivos de salida
+
